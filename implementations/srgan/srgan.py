@@ -16,6 +16,7 @@ import torch.nn as nn
 import torch
 import sys
 import argparse
+from torchsummary import summary
 
 from torchvision.utils import save_image, make_grid
 
@@ -35,7 +36,7 @@ if __name__ == '__main__':
     parser.add_argument("--epoch", type=int, default=0, help="epoch to start training from")
     parser.add_argument("--n_epochs", type=int, default=200, help="number of epochs of training")
     parser.add_argument("--dataset_name", type=str, default="img_align_celeba", help="name of the dataset")
-    parser.add_argument("--batch_size", type=int, default=4, help="size of the batches")
+    parser.add_argument("--batch_size", type=int, default=8, help="size of the batches")
     parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rate")
     parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
     parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
@@ -45,7 +46,7 @@ if __name__ == '__main__':
     parser.add_argument("--hr_width", type=int, default=256, help="high res. image width")
     parser.add_argument("--channels", type=int, default=3, help="number of image channels")
     parser.add_argument("--sample_interval", type=int, default=100, help="interval between saving image samples")
-    parser.add_argument("--checkpoint_interval", type=int, default=-1, help="interval between model checkpoints")
+    parser.add_argument("--checkpoint_interval", type=int, default=1, help="interval between model checkpoints")
     opt = parser.parse_args()
     print(opt)
 
@@ -55,6 +56,7 @@ if __name__ == '__main__':
 
     # Initialize generator and discriminator
     generator = GeneratorResNet()
+
     discriminator = Discriminator(input_shape=(opt.channels, *hr_shape))
     feature_extractor = FeatureExtractor()
 
@@ -90,6 +92,13 @@ if __name__ == '__main__':
         shuffle=True,  # shuffle
         num_workers=opt.n_cpu,  # using 8 cpu threads
     )
+
+    print("Generator Model Summary")
+    summary(generator,input_size=(3,256//4,256//4))
+    print("Discriminator Model Summary")
+    summary(discriminator,input_size=(3,256,256))
+    print("VGG19 Model Summary")
+    summary(feature_extractor,input_size=(3,256,256))
 
     # ----------
     #  Training
@@ -162,7 +171,7 @@ if __name__ == '__main__':
                 img_grid = torch.cat((imgs_lr, gen_hr), -1)
                 save_image(img_grid, "images/%d.png" % batches_done, normalize=False)
 
-        if opt.checkpoint_interval != -1 and epoch % opt.checkpoint_interval == 0:
+        if epoch != 0 and epoch % opt.checkpoint_interval == 0 :
             # Save model checkpoints
             torch.save(generator.state_dict(), "saved_models/generator_%d.pth" % epoch)
             torch.save(discriminator.state_dict(), "saved_models/discriminator_%d.pth" % epoch)

@@ -5,33 +5,33 @@ from torchvision.models import vgg19
 import math
 
 
-class FeatureExtractor(nn.Module):
+class FeatureExtractor(nn.Module): # Feature Extract Model
     def __init__(self):
         super(FeatureExtractor, self).__init__()
-        vgg19_model = vgg19(pretrained=True)
+        vgg19_model = vgg19(pretrained=True) # pretrained된 vgg19 model
         self.feature_extractor = nn.Sequential(*list(vgg19_model.features.children())[:18])
 
-    def forward(self, img):
+    def forward(self, img): # forward
         return self.feature_extractor(img)
 
 
-class ResidualBlock(nn.Module):
+class ResidualBlock(nn.Module): # ResNet BasicBlock
     def __init__(self, in_features):
         super(ResidualBlock, self).__init__()
         self.conv_block = nn.Sequential(
-            nn.Conv2d(in_features, in_features, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(in_features, 0.8),
-            nn.PReLU(),
-            nn.Conv2d(in_features, in_features, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(in_features, 0.8),
+            nn.Conv2d(in_features, in_features, kernel_size=3, stride=1, padding=1), # 3X3 conv filter = same
+            nn.BatchNorm2d(in_features, 0.8), # batch normalization
+            nn.PReLU(), # Leakly ReLU
+            nn.Conv2d(in_features, in_features, kernel_size=3, stride=1, padding=1), # 3X3 conv filter = same
+            nn.BatchNorm2d(in_features, 0.8), # batch normalization
         )
 
     def forward(self, x):
-        return x + self.conv_block(x)
+        return x + self.conv_block(x) # concat ( skip connection )
 
 
-class GeneratorResNet(nn.Module):
-    def __init__(self, in_channels=3, out_channels=3, n_residual_blocks=16):
+class GeneratorResNet(nn.Module): # 생성자 ( Generator )
+    def __init__(self, in_channels=3, out_channels=3, n_residual_blocks=16):  # Low resolution Tensor를 사용하여 High resolution을 생성
         super(GeneratorResNet, self).__init__()
 
         # First layer
@@ -53,7 +53,7 @@ class GeneratorResNet(nn.Module):
                 # nn.Upsample(scale_factor=2),
                 nn.Conv2d(64, 256, 3, 1, 1),
                 nn.BatchNorm2d(256),
-                nn.PixelShuffle(upscale_factor=2),
+                nn.PixelShuffle(upscale_factor=2), # upscale
                 nn.PReLU(),
             ]
         self.upsampling = nn.Sequential(*upsampling)
@@ -65,7 +65,7 @@ class GeneratorResNet(nn.Module):
         out1 = self.conv1(x)
         out = self.res_blocks(out1)
         out2 = self.conv2(out)
-        out = torch.add(out1, out2)
+        out = torch.add(out1, out2) # 덧셈
         out = self.upsampling(out)
         out = self.conv3(out)
         return out
