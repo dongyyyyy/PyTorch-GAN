@@ -7,6 +7,7 @@ Instrustion on running the script:
 2. Save the folder 'img_align_celeba' to '../../data/'
 4. Run the sript using command 'python3 srgan.py'
 """
+''' # 해당 py파일에서 사용하지 않는 import  
 import os
 import numpy as np
 import math
@@ -14,6 +15,8 @@ import itertools
 import torchvision.transforms as transforms
 import torch.nn as nn
 import torch
+'''
+
 import sys
 import argparse
 from torchsummary import summary
@@ -87,19 +90,19 @@ if __name__ == '__main__':
     Tensor = torch.cuda.FloatTensor if cuda else torch.Tensor
 
     dataloader = DataLoader(  # training data read
-        ImageDataset("../../data/%s" % opt.dataset_name, hr_shape=hr_shape),
+        ImageDataset("../../data/%s" % opt.dataset_name, hr_shape=hr_shape),# root = ../../data/img_align_celeba &  hr_shape = hr_shape
         batch_size=opt.batch_size,  # batch size ( mini-batch )
         shuffle=True,  # shuffle
         num_workers=opt.n_cpu,  # using 8 cpu threads
     )
-
+    '''
     print("Generator Model Summary")
     summary(generator,input_size=(3,256//4,256//4))
     print("Discriminator Model Summary")
     summary(discriminator,input_size=(3,256,256))
     print("VGG19 Model Summary")
     summary(feature_extractor,input_size=(3,256,256))
-
+    '''
     # ----------
     #  Training
     # ----------
@@ -110,10 +113,16 @@ if __name__ == '__main__':
             imgs_lr = Variable(imgs["lr"].type(Tensor)) # low resolution
             imgs_hr = Variable(imgs["hr"].type(Tensor)) # high resolution
 
+            print(imgs_lr.shape)
+            print(imgs_hr.shape)
             # Adversarial ground truths
             valid = Variable(Tensor(np.ones((imgs_lr.size(0), *discriminator.output_shape))), requires_grad=False)
             fake = Variable(Tensor(np.zeros((imgs_lr.size(0), *discriminator.output_shape))), requires_grad=False)
-
+            print(imgs_lr.size(0)) # batch_size
+            print(*discriminator.output_shape) # (1,16,16)
+            print(valid.shape)
+            print(fake.shape)
+            exit()
             # ------------------
             #  Train Generators
             # ------------------
