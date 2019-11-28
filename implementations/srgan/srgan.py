@@ -34,12 +34,12 @@ from implementations.srgan.datasets import *
 if __name__ == '__main__':
     os.makedirs("images", exist_ok=True)
     os.makedirs("saved_models", exist_ok=True)
-    read_epoch = 9
+    read_epoch = 0
     parser = argparse.ArgumentParser()
     parser.add_argument("--epoch", type=int, default=read_epoch, help="epoch to start training from")
     parser.add_argument("--n_epochs", type=int, default=200, help="number of epochs of training")
     parser.add_argument("--dataset_name", type=str, default="img_align_celeba", help="name of the dataset")
-    parser.add_argument("--batch_size", type=int, default=8, help="size of the batches")
+    parser.add_argument("--batch_size", type=int, default=12, help="size of the batches") # RTX 2070기준 batch max size = 8
     parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rate")
     parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
     parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
@@ -164,14 +164,18 @@ if __name__ == '__main__':
             # --------------
             #  Log Progress
             # --------------
-
+            '''
             sys.stdout.write(
                 "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]\n"
                 % (epoch, opt.n_epochs, i, len(dataloader), loss_D.item(), loss_G.item())
             )
-
+            '''
             batches_done = epoch * len(dataloader) + i
             if batches_done % opt.sample_interval == 0:
+                sys.stdout.write(
+                    "[Epoch %d/%d] [D loss: %f] [G loss: %f]\n"
+                    % (epoch, opt.n_epochs, loss_D.item(), loss_G.item())
+                )
                 # UnNormalize function
                 unorm = UnNormalize()
                 imgs_lr = unorm(imgs_lr)
@@ -180,6 +184,7 @@ if __name__ == '__main__':
 
                 # Save image grid with upsampled inputs and SRGAN outputs
                 imgs_lr = nn.functional.interpolate(imgs_lr, scale_factor=4)
+                # 'nearest' ( default ) , 'linear' , 'bilinear' , 'bicubic', 'trilinear' , 'area'
                 gen_sr = make_grid(gen_hr, nrow=1, normalize=False) # change normalize=True => False
                 imgs_hr = make_grid(imgs_hr, nrow=1, normalize=False)
                 imgs_lr = make_grid(imgs_lr, nrow=1, normalize=False) # normalize means that shift the image to the range(0,1), by the min and max values specified by range. Default = False
