@@ -34,9 +34,9 @@ from implementations.srgan.datasets import *
 if __name__ == '__main__':
     os.makedirs("images", exist_ok=True)
     os.makedirs("saved_models", exist_ok=True)
-
+    read_epoch = 4
     parser = argparse.ArgumentParser()
-    parser.add_argument("--epoch", type=int, default=0, help="epoch to start training from")
+    parser.add_argument("--epoch", type=int, default=read_epoch, help="epoch to start training from")
     parser.add_argument("--n_epochs", type=int, default=200, help="number of epochs of training")
     parser.add_argument("--dataset_name", type=str, default="img_align_celeba", help="name of the dataset")
     parser.add_argument("--batch_size", type=int, default=8, help="size of the batches")
@@ -79,8 +79,8 @@ if __name__ == '__main__':
 
     if opt.epoch != 0:  # 처음부터 학습이 아닐 경우에는 saved_models에서 해당 시작 위치에 해당하는 checkpoint 정보 가져오기
         # Load pretrained models
-        generator.load_state_dict(torch.load("saved_models/generator_%d.pth"))
-        discriminator.load_state_dict(torch.load("saved_models/discriminator_%d.pth"))
+        generator.load_state_dict(torch.load("saved_models/generator_%d.pth"%opt.epoch))
+        discriminator.load_state_dict(torch.load("saved_models/discriminator_%d.pth"%opt.epoch))
 
     # Optimizers
     optimizer_G = torch.optim.Adam(generator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2))  # generator optimizer
@@ -88,9 +88,8 @@ if __name__ == '__main__':
                                    betas=(opt.b1, opt.b2))  # discriminator optimizer
 
     Tensor = torch.cuda.FloatTensor if cuda else torch.Tensor
-
     dataloader = DataLoader(  # training data read
-        ImageDataset("../../data/%s" % opt.dataset_name, hr_shape=hr_shape),# root = ../../data/img_align_celeba &  hr_shape = hr_shape
+        ImageDataset("../../data/%s" % opt.dataset_name, hr_shape=hr_shape,max_len=8000),# root = ../../data/img_align_celeba &  hr_shape = hr_shape
         batch_size=opt.batch_size,  # batch size ( mini-batch )
         shuffle=True,  # shuffle
         num_workers=opt.n_cpu,  # using 8 cpu threads
@@ -113,16 +112,16 @@ if __name__ == '__main__':
             imgs_lr = Variable(imgs["lr"].type(Tensor)) # low resolution
             imgs_hr = Variable(imgs["hr"].type(Tensor)) # high resolution
 
-            print(imgs_lr.shape)
-            print(imgs_hr.shape)
+            #print(imgs_lr.shape)
+            #print(imgs_hr.shape)
             # Adversarial ground truths
             valid = Variable(Tensor(np.ones((imgs_lr.size(0), *discriminator.output_shape))), requires_grad=False)
             fake = Variable(Tensor(np.zeros((imgs_lr.size(0), *discriminator.output_shape))), requires_grad=False)
-            print(imgs_lr.size(0)) # batch_size
-            print(*discriminator.output_shape) # (1,16,16)
-            print(valid.shape)
-            print(fake.shape)
-            exit()
+            #print(imgs_lr.size(0)) # batch_size
+            #print(*discriminator.output_shape) # (1,16,16)
+            #print(valid.shape)
+            #print(fake.shape)
+            #exit()
             # ------------------
             #  Train Generators
             # ------------------
@@ -175,12 +174,13 @@ if __name__ == '__main__':
             if batches_done % opt.sample_interval == 0:
                 # Save image grid with upsampled inputs and SRGAN outputs
                 imgs_lr = nn.functional.interpolate(imgs_lr, scale_factor=4)
-                gen_hr = make_grid(gen_hr, nrow=1, normalize=False) # change normalize=True => False
+                gen_sr = make_grid(gen_hr, nrow=1, normalize=False) # change normalize=True => False
+                imgs_hr = make_grid(imgs_hr, nrow=1, normalize=False)
                 imgs_lr = make_grid(imgs_lr, nrow=1, normalize=False) # normalize means that shift the image to the range(0,1), by the min and max values specified by range. Default = False
-                img_grid = torch.cat((imgs_lr, gen_hr), -1)
+                img_grid = torch.cat((imgs_lr, gen_sr,imgs_hr), -1)
                 save_image(img_grid, "images/%d.png" % batches_done, normalize=False)
 
-        if epoch != 0 and epoch % opt.checkpoint_interval == 0 :
+        if epoch % opt.checkpoint_interval == 0 :
             # Save model checkpoints
-            torch.save(generator.state_dict(), "saved_models/generator_%d.pth" % epoch)
-            torch.save(discriminator.state_dict(), "saved_models/discriminator_%d.pth" % epoch)
+            torch.save(generator.state_dict(), "saved_models/generator_%d.pth" % epoch+1)
+            torch.save(discriminator.state_dict(), "saved_models/discriminator_%d.pth" % epoch+1)

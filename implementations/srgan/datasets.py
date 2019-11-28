@@ -14,8 +14,11 @@ std = np.array([0.229, 0.224, 0.225])
 
 
 class ImageDataset(Dataset):
-    def __init__(self, root, hr_shape): # download, read data 등등을 하는 파트
+    def __init__(self, root, hr_shape, max_len=0): # download, read data 등등을 하는 파트
         hr_height, hr_width = hr_shape # 256 X 256
+        if(max_len==0):
+            max_len = len(self.files)
+        self.max_len = max_len
         # Transforms for low resolution images and high resolution images
         self.lr_transform = transforms.Compose( # 고해상도로 만들 데이터인 low resolution data
             [
@@ -42,4 +45,5 @@ class ImageDataset(Dataset):
         return {"lr": img_lr, "hr": img_hr} # map 형태로 반환
 
     def __len__(self): # data size를 넘겨주는 파트
-        return len(self.files) # 파일 길이 반환 ( 총 이미지 수 )
+        #return len(self.files)
+        return self.max_len # 파일 길이 반환 ( 정한 이미지 수 )
