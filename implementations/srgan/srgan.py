@@ -182,5 +182,5 @@ if __name__ == '__main__':
 
         if epoch % opt.checkpoint_interval == 0 :
             # Save model checkpoints
-            torch.save(generator.state_dict(), "saved_models/generator_%d.pth" % epoch+1)
-            torch.save(discriminator.state_dict(), "saved_models/discriminator_%d.pth" % epoch+1)
+            torch.save(generator.state_dict(), "saved_models/generator_%d.pth" % (epoch+1))
+            torch.save(discriminator.state_dict(), "saved_models/discriminator_%d.pth" % (epoch+1))
