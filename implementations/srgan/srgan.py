@@ -172,6 +172,12 @@ if __name__ == '__main__':
 
             batches_done = epoch * len(dataloader) + i
             if batches_done % opt.sample_interval == 0:
+                # UnNormalize function
+                unorm = UnNormalize()
+                imgs_lr = unorm(imgs_lr)
+                imgs_hr = unorm(imgs_hr)
+                gen_hr = unorm(gen_hr)
+
                 # Save image grid with upsampled inputs and SRGAN outputs
                 imgs_lr = nn.functional.interpolate(imgs_lr, scale_factor=4)
                 gen_sr = make_grid(gen_hr, nrow=1, normalize=False) # change normalize=True => False

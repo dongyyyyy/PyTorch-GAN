@@ -12,6 +12,8 @@ import torchvision.transforms as transforms
 mean = np.array([0.485, 0.456, 0.406])
 std = np.array([0.229, 0.224, 0.225])
 
+un_mean = np.array([-(mean[0]/std[0]),-(mean[1]/std[1]),-(mean[2]/std[2])])
+un_std = np.array([1/std[0],1/std[1],1/std[2]])
 
 class ImageDataset(Dataset):
     def __init__(self, root, hr_shape, max_len=0): # download, read data 등등을 하는 파트
@@ -47,3 +49,20 @@ class ImageDataset(Dataset):
     def __len__(self): # data size를 넘겨주는 파트
         #return len(self.files)
         return self.max_len # 파일 길이 반환 ( 정한 이미지 수 )
+
+class UnNormalize(object):
+    def __init__(self):
+        self.mean = mean
+        self.std = std
+
+    def __call__(self, tensor):
+        """
+        Args:
+            tensor (Tensor): Tensor image of size (C, H, W) to be normalized.
+        Returns:
+            Tensor: Normalized image.
+        """
+        for t, m, s in zip(tensor, self.mean, self.std):
+            t.mul_(s).add_(m)
+            # The normalize code -> t.sub_(m).div_(s)
+        return tensor
