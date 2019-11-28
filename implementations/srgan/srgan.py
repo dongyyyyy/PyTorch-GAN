@@ -34,7 +34,7 @@ from implementations.srgan.datasets import *
 if __name__ == '__main__':
     os.makedirs("images", exist_ok=True)
     os.makedirs("saved_models", exist_ok=True)
-    read_epoch = 4
+    read_epoch = 9
     parser = argparse.ArgumentParser()
     parser.add_argument("--epoch", type=int, default=read_epoch, help="epoch to start training from")
     parser.add_argument("--n_epochs", type=int, default=200, help="number of epochs of training")
