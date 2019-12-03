@@ -39,7 +39,7 @@ if __name__ == '__main__':
     parser.add_argument("--epoch", type=int, default=read_epoch, help="epoch to start training from")
     parser.add_argument("--n_epochs", type=int, default=200, help="number of epochs of training")
     parser.add_argument("--dataset_name", type=str, default="img_align_celeba", help="name of the dataset")
-    parser.add_argument("--batch_size", type=int, default=12, help="size of the batches") # RTX 2070기준 batch max size = 8
+    parser.add_argument("--batch_size", type=int, default=12, help="size of the batches")
     parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rate")
     parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
     parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
@@ -73,7 +73,8 @@ if __name__ == '__main__':
     # y = 1일 경우
     #BCE = -log[h(x)]
     #adversarial_GAN = torch.nn.BCEWithLogitsLoss()
-    criterion_GAN = torch.nn.BCEWithLogitsLoss()
+    criterion_GAN = torch.nn.BCELoss()
+    #criterion_GAN = torch.nn.BCEWithLogitsLoss()
     criterion_content = torch.nn.MSELoss()
     #criterion_content = torch.nn.L1Loss() # 각 원소별 차이의 절댓값을 계산
 
@@ -88,8 +89,8 @@ if __name__ == '__main__':
         # Load pretrained models
         #generator.load_state_dict(torch.load("saved_models/generator_%d.pth"%opt.epoch))
         #discriminator.load_state_dict(torch.load("saved_models/discriminator_%d.pth"%opt.epoch))
-        generator.load_state_dict(torch.load("saved_models_paper/generator_%d.pth" % opt.epoch))
-        discriminator.load_state_dict(torch.load("saved_models_paper/discriminator_%d.pth" % opt.epoch))
+        generator.load_state_dict(torch.load("saved_models_new/generator_%d.pth" % opt.epoch))
+        discriminator.load_state_dict(torch.load("saved_models_new/discriminator_%d.pth" % opt.epoch))
     # Optimizers
     optimizer_G = torch.optim.Adam(generator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2))  # generator optimizer
     optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=opt.lr,
@@ -126,9 +127,8 @@ if __name__ == '__main__':
             #여기서부터 공부해서 차원 맞추는 공부 할 것!!!
             #print("valid shape : {}, {} , {}".format(np.ones((imgs_lr.size(0),*discriminator.output_shape)).shape,imgs_lr.size(0),*discriminator.output_shape))
             # batch_size , 1 , 16 , 16
-            valid = Variable(Tensor(np.ones((imgs_lr.size(0), *discriminator.output_shape))), requires_grad=False)
-            fake = Variable(Tensor(np.zeros((imgs_lr.size(0), *discriminator.output_shape))), requires_grad=False)
-
+            valid = Variable(Tensor(np.ones((imgs_lr.size(0), 1))), requires_grad=False)
+            fake = Variable(Tensor(np.zeros((imgs_lr.size(0), 1))), requires_grad=False)
 
             # Generate a high resolution image from low resolution input
             gen_hr = generator(imgs_lr)
@@ -190,13 +190,13 @@ if __name__ == '__main__':
             # --------------
 
             batches_done = epoch * len(dataloader) + i
-            if batches_done % 10 == 0:
-                sys.stdout.write(
-                    "[Epoch %d/%d] [Batch %d/%d][D loss: %f] [G loss: %f] [read %d images time : %dsec]\n"
-                    % (epoch, opt.n_epochs, i , len(dataloader), loss_D.item(), loss_G.item(),
-                       (batches_done * opt.batch_size), (time.time() - start))
-                )
-                start = time.time()  # 시작 시간 저장
+            #if batches_done % 10 == 0:
+            sys.stdout.write(
+                "[Epoch %d/%d] [Batch %d/%d][D loss: %f] [G loss: %f] [read %d images time : %dsec]\n"
+                % (epoch, opt.n_epochs, i , len(dataloader), loss_D.item(), loss_G.item(),
+                   (batches_done * opt.batch_size), (time.time() - start))
+            )
+            start = time.time()  # 시작 시간 저장
 
             if batches_done % (opt.sample_interval*10) == 0:
                 # UnNormalize function
@@ -212,9 +212,9 @@ if __name__ == '__main__':
                 imgs_hr = make_grid(imgs_hr, nrow=1, normalize=False)
                 imgs_lr = make_grid(imgs_lr, nrow=1, normalize=False) # normalize means that shift the image to the range(0,1), by the min and max values specified by range. Default = False
                 img_grid = torch.cat((imgs_lr, gen_sr,imgs_hr), -1)
-                save_image(img_grid, "images_paper/%d.png" % batches_done, normalize=False)
+                save_image(img_grid, "images_new/%d.png" % batches_done, normalize=False)
 
         if epoch % opt.checkpoint_interval == 0 :
             # Save model checkpoints
-            torch.save(generator.state_dict(), "saved_models_paper/generator_%d.pth" % (epoch+1))
-            torch.save(discriminator.state_dict(), "saved_models_paper/discriminator_%d.pth" % (epoch+1))
+            torch.save(generator.state_dict(), "saved_models_new/generator_%d.pth" % (epoch+1))
+            torch.save(discriminator.state_dict(), "saved_models_new/discriminator_%d.pth" % (epoch+1))
