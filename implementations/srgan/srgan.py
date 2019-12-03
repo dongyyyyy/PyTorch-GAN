@@ -88,8 +88,8 @@ if __name__ == '__main__':
         # Load pretrained models
         #generator.load_state_dict(torch.load("saved_models/generator_%d.pth"%opt.epoch))
         #discriminator.load_state_dict(torch.load("saved_models/discriminator_%d.pth"%opt.epoch))
-        generator.load_state_dict(torch.load("saved_models_paper_new/generator_%d.pth" % opt.epoch))
-        discriminator.load_state_dict(torch.load("saved_models_new/discriminator_%d.pth" % opt.epoch))
+        generator.load_state_dict(torch.load("saved_models_paper/generator_%d.pth" % opt.epoch))
+        discriminator.load_state_dict(torch.load("saved_models_paper/discriminator_%d.pth" % opt.epoch))
     # Optimizers
     optimizer_G = torch.optim.Adam(generator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2))  # generator optimizer
     optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=opt.lr,
@@ -212,9 +212,9 @@ if __name__ == '__main__':
                 imgs_hr = make_grid(imgs_hr, nrow=1, normalize=False)
                 imgs_lr = make_grid(imgs_lr, nrow=1, normalize=False) # normalize means that shift the image to the range(0,1), by the min and max values specified by range. Default = False
                 img_grid = torch.cat((imgs_lr, gen_sr,imgs_hr), -1)
-                save_image(img_grid, "images_new/%d.png" % batches_done, normalize=False)
+                save_image(img_grid, "images_paper/%d.png" % batches_done, normalize=False)
 
         if epoch % opt.checkpoint_interval == 0 :
             # Save model checkpoints
-            torch.save(generator.state_dict(), "saved_models_new/generator_%d.pth" % (epoch+1))
-            torch.save(discriminator.state_dict(), "saved_models_new/discriminator_%d.pth" % (epoch+1))
+            torch.save(generator.state_dict(), "saved_models_paper/generator_%d.pth" % (epoch+1))
+            torch.save(discriminator.state_dict(), "saved_models_paper/discriminator_%d.pth" % (epoch+1))

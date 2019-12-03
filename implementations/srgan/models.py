@@ -9,7 +9,7 @@ class FeatureExtractor(nn.Module): # Feature Extract Model
     def __init__(self):
         super(FeatureExtractor, self).__init__()
         vgg19_model = vgg19(pretrained=True) # pretrained된 vgg19 model
-        self.feature_extractor = nn.Sequential(*list(vgg19_model.features.children())[:18])
+        self.feature_extractor = nn.Sequential(*list(vgg19_model.features.children())[:36])
 
     def forward(self, img): # forward
         return self.feature_extractor(img)
@@ -60,7 +60,7 @@ class GeneratorResNet(nn.Module): # 생성자 ( Generator )
 
         # Final output layer
         self.conv3 = nn.Sequential(nn.Conv2d(64, out_channels, kernel_size=9, stride=1, padding=4), nn.Tanh())
-
+        # Tanh을 쓰는 이유는 image의 pixel값을 -1~1사이의 값으로 Normalize했기 때문에 결과 또한 다음과 같이 Normalize
     def forward(self, x):
         out1 = self.conv1(x)
         out = self.res_blocks(out1)
