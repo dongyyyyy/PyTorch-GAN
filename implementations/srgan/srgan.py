@@ -59,8 +59,8 @@ if __name__ == '__main__':
 
     # Initialize generator and discriminator
     generator = GeneratorResNet()
-
-    discriminator = Discriminator(input_shape=(opt.channels, *hr_shape))
+    discriminator = Discriminator_withDense(input_shape=(opt.channels, *hr_shape))
+    #discriminator = Discriminator(input_shape=(opt.channels, *hr_shape))
     feature_extractor = FeatureExtractor()
 
     # Set feature extractor to inference mode
@@ -127,6 +127,8 @@ if __name__ == '__main__':
             #여기서부터 공부해서 차원 맞추는 공부 할 것!!!
             #print("valid shape : {}, {} , {}".format(np.ones((imgs_lr.size(0),*discriminator.output_shape)).shape,imgs_lr.size(0),*discriminator.output_shape))
             # batch_size , 1 , 16 , 16
+            #valid = Variable(Tensor(np.ones((imgs_lr.size(0), *discriminator.output_shape))), requires_grad=False)
+            #fake = Variable(Tensor(np.zeros((imgs_lr.size(0), *discriminator.output_shape))), requires_grad=False)
             valid = Variable(Tensor(np.ones((imgs_lr.size(0), 1))), requires_grad=False)
             fake = Variable(Tensor(np.zeros((imgs_lr.size(0), 1))), requires_grad=False)
 
@@ -190,13 +192,13 @@ if __name__ == '__main__':
             # --------------
 
             batches_done = epoch * len(dataloader) + i
-            #if batches_done % 10 == 0:
-            sys.stdout.write(
-                "[Epoch %d/%d] [Batch %d/%d][D loss: %f] [G loss: %f] [read %d images time : %dsec]\n"
-                % (epoch, opt.n_epochs, i , len(dataloader), loss_D.item(), loss_G.item(),
-                   (batches_done * opt.batch_size), (time.time() - start))
-            )
-            start = time.time()  # 시작 시간 저장
+            if batches_done % 10 == 0:
+                sys.stdout.write(
+                    "[Epoch %d/%d] [Batch %d/%d][D loss: %f] [G loss: %f] [read %d images time : %dsec]\n"
+                    % (epoch, opt.n_epochs, i , len(dataloader), loss_D.item(), loss_G.item(),
+                       (batches_done * opt.batch_size), (time.time() - start))
+                )
+                start = time.time()  # 시작 시간 저장
 
             if batches_done % (opt.sample_interval*10) == 0:
                 # UnNormalize function

@@ -16,7 +16,8 @@ if __name__ == '__main__':
     os.makedirs("images", exist_ok=True)
     os.makedirs("saved_models", exist_ok=True)
     read_epoch_non_sigmoid = 200
-    read_epoch = 69
+    read_epoch = 127
+    read_epoch_new = 49
     parser = argparse.ArgumentParser()
     parser.add_argument("--epoch", type=int, default=read_epoch, help="epoch to start training from")
     parser.add_argument("--n_epochs", type=int, default=200, help="number of epochs of training")
@@ -42,37 +43,35 @@ if __name__ == '__main__':
     generator = GeneratorResNet()
 
     discriminator = Discriminator(input_shape=(opt.channels, *hr_shape))
-    feature_extractor = FeatureExtractor()
-
-    # Set feature extractor to inference mode
-    feature_extractor.eval()
 
     # Initialize generator and discriminator
     generator_sigmoid = GeneratorResNet()
 
-    discriminator_sigmoid = Discriminator_sigmoid(input_shape=(opt.channels, *hr_shape))
-    feature_extractor_sigmoid = FeatureExtractor()
+    discriminator_sigmoid = Discriminator_withDense(input_shape=(opt.channels, *hr_shape))
 
-    # Set feature extractor to inference mode
-    feature_extractor_sigmoid.eval()
+    # Initialize generator and discriminator
+    generator_paper = GeneratorResNet()
+
+    discriminator_paper = Discriminator(input_shape=(opt.channels, *hr_shape))
 
     if cuda:
         generator = generator.cuda()
         discriminator = discriminator.cuda()
-        feature_extractor = feature_extractor.cuda()
 
         generator_sigmoid = generator_sigmoid.cuda()
         discriminator_sigmoid = discriminator_sigmoid.cuda()
-        feature_extractor_sigmoid = feature_extractor_sigmoid.cuda()
 
+        generator_paper = generator_paper.cuda()
+        discriminator_paper = discriminator_paper.cuda()
 
     if opt.epoch != 0:  # 처음부터 학습이 아닐 경우에는 saved_models에서 해당 시작 위치에 해당하는 checkpoint 정보 가져오기
         # Load pretrained models
         generator.load_state_dict(torch.load("saved_models/generator_%d.pth"%read_epoch_non_sigmoid))
         discriminator.load_state_dict(torch.load("saved_models/discriminator_%d.pth"%read_epoch_non_sigmoid))
-        generator_sigmoid.load_state_dict(torch.load("saved_models_paper/generator_%d.pth"%opt.epoch))
-        discriminator_sigmoid.load_state_dict(torch.load("saved_models_paper/discriminator_%d.pth" % opt.epoch))
-
+        generator_sigmoid.load_state_dict(torch.load("saved_models_new/generator_%d.pth"%opt.epoch))
+        discriminator_sigmoid.load_state_dict(torch.load("saved_models_new/discriminator_%d.pth" % opt.epoch))
+        generator_paper.load_state_dict(torch.load("saved_models_paper/generator_%d.pth"%read_epoch_new))
+        discriminator_paper.load_state_dict(torch.load("saved_models_paper/discriminator_%d.pth" % read_epoch_new))
 
     Tensor = torch.cuda.FloatTensor if cuda else torch.Tensor
     dataloader = DataLoader(  # training data read
@@ -91,30 +90,29 @@ if __name__ == '__main__':
         # Generate a high resolution image from low resolution input
         gen_hr = generator(imgs_lr)
         gen_hr_sigmoid = generator_sigmoid(imgs_lr)
+        gen_hr_new = generator_paper(imgs_lr)
 
         unorm = UnNormalize()
         imgs_lr = unorm(imgs_lr)
         imgs_hr = unorm(imgs_hr)
         gen_hr = unorm(gen_hr)
         gen_hr_sigmoid = unorm(gen_hr_sigmoid)
+        gen_hr_new = unorm(gen_hr_new)
 
         imgs_lr_neareset = nn.functional.interpolate(imgs_lr, scale_factor=4)
-        #imgs_lr_linear = nn.functional.interpolate(imgs_lr, scale_factor=4, mode='linear',align_corners=False)
         imgs_lr_bilinear = nn.functional.interpolate(imgs_lr, scale_factor=4, mode='bilinear',align_corners=False)
-        #imgs_lr_trilinear = nn.functional.interpolate(imgs_lr, scale_factor=4, mode='trilinear',align_corners=False)
         imgs_lr_bicubic = nn.functional.interpolate(imgs_lr,scale_factor=4,mode='bicubic',align_corners=False)
 
         gen_sr = make_grid(gen_hr, nrow=1, normalize=False) # change normalize=True => False
         imgs_hr = make_grid(imgs_hr, nrow=1, normalize=False)
         gen_hr_sigmoid = make_grid(gen_hr_sigmoid, nrow=1, normalize=False)
-        #imgs_lr_linear = make_grid(imgs_lr_neareset, nrow=1, normalize=False)
+        gen_hr_new = make_grid(gen_hr_new, nrow=1, normalize=False)
         imgs_lr_bilinear = make_grid(imgs_lr_neareset, nrow=1, normalize=False)
-        #imgs_lr_trilinear = make_grid(imgs_lr_neareset, nrow=1, normalize=False)
         imgs_lr_neareset = make_grid(imgs_lr_neareset, nrow=1, normalize=False)
         imgs_lr_bicubic = make_grid(imgs_lr_neareset, nrow=1, normalize=False)
 
         #imgs_lr = make_grid(imgs_lr, nrow=1, normalize=False) # normalize means that shift the image to the range(0,1), by the min and max values specified by range. Default = False
-        img_grid = torch.cat((imgs_lr_bilinear,imgs_lr_neareset,imgs_lr_bicubic, gen_sr, imgs_hr,gen_hr_sigmoid), -1)
+        img_grid = torch.cat((imgs_lr_bilinear,imgs_lr_neareset,imgs_lr_bicubic, gen_sr,gen_hr_new,gen_hr_sigmoid, imgs_hr), -1)
         save_image(img_grid, "test_images/%d.png" % i, normalize=False)
-        if(i==10):
+        if(i==20):
             exit()

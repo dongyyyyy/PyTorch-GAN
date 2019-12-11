@@ -12,6 +12,20 @@ class FeatureExtractor(nn.Module): # Feature Extract Model
         self.feature_extractor = nn.Sequential(*list(vgg19_model.features.children())[:36])
 
     def forward(self, img): # forward
+        return self.feature_extractor(img)import torch.nn as nn
+import torch.nn.functional as F
+import torch
+from torchvision.models import vgg19
+import math
+
+
+class FeatureExtractor(nn.Module): # Feature Extract Model
+    def __init__(self):
+        super(FeatureExtractor, self).__init__()
+        vgg19_model = vgg19(pretrained=True) # pretrained된 vgg19 model
+        self.feature_extractor = nn.Sequential(*list(vgg19_model.features.children())[:36])
+
+    def forward(self, img): # forward
         return self.feature_extractor(img)
 
 
@@ -70,6 +84,46 @@ class GeneratorResNet(nn.Module): # 생성자 ( Generator )
         out = self.conv3(out)
         return out
 
+class GeneratorResNet(nn.Module): # 생성자 ( Generator )
+    def __init__(self, in_channels=3, out_channels=3, n_residual_blocks=16):  # Low resolution Tensor를 사용하여 High resolution을 생성
+        super(GeneratorResNet, self).__init__()
+
+        # First layer
+        self.conv1 = nn.Sequential(nn.Conv2d(in_channels, 64, kernel_size=9, stride=1, padding=4), nn.PReLU())
+
+        # Residual blocks
+        res_blocks = []
+        for _ in range(n_residual_blocks):
+            res_blocks.append(ResidualBlock(64))
+        self.res_blocks = nn.Sequential(*res_blocks)
+
+        # Second conv layer post residual blocks
+        self.conv2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1), nn.BatchNorm2d(64, 0.8))
+
+        # Upsampling layers
+        upsampling = []
+        for out_features in range(2):
+            upsampling += [
+                # nn.Upsample(scale_factor=2),
+                nn.Conv2d(64, 256, 3, 1, 1),
+                nn.BatchNorm2d(256),
+                nn.PixelShuffle(upscale_factor=2), # upscale
+                nn.PReLU(),
+            ]
+        self.upsampling = nn.Sequential(*upsampling)
+
+        # Final output layer
+        self.conv3 = nn.Sequential(nn.Conv2d(64, out_channels, kernel_size=9, stride=1, padding=4), nn.Tanh())
+        # Tanh을 쓰는 이유는 image의 pixel값을 -1~1사이의 값으로 Normalize했기 때문에 결과 또한 다음과 같이 Normalize
+    def forward(self, x):
+        out1 = self.conv1(x)
+        out = self.res_blocks(out1)
+        out2 = self.conv2(out)
+        out = torch.add(out1, out2) # 덧셈
+        out = self.upsampling(out)
+        out = self.conv3(out)
+        return out
+
 
 class Discriminator(nn.Module):
     def __init__(self, input_shape):
@@ -78,7 +132,7 @@ class Discriminator(nn.Module):
         self.input_shape = input_shape
         in_channels, in_height, in_width = self.input_shape
         patch_h, patch_w = int(in_height / 2 ** 4), int(in_width / 2 ** 4)
-        #self.output_shape = 1
+        self.output_shape = (1, patch_h, patch_w)
 
         def discriminator_block(in_filters, out_filters, first_block=False):
             layers = []
@@ -97,27 +151,55 @@ class Discriminator(nn.Module):
             layers.extend(discriminator_block(in_filters, out_filters, first_block=(i == 0)))
             in_filters = out_filters
         # output = batch_sizeX512X16X16
+
+        layers.append(nn.Conv2d(out_filters,1,kernel_size=3,stride=1,padding=1))
+
         self.model = nn.Sequential(*layers)
-        '''
-        layers.append(nn.)
-        layers.append(nn.Linear(out_filters, 1024))
-        layers.append(nn.LeakyReLU(0.2, inplace=True))
-        layers.append(nn.Linear(1024,1))
 
-        #BCELoss 를 사용하기 위한 Sigmoid activation function
-        layers.append(nn.Sigmoid())
+    def forward(self, img):
+        return self.model(img)
 
 
-        '''
+class Discriminator_withDense(nn.Module):
+    def __init__(self, input_shape):
+        super(Discriminator_withDense, self).__init__()
+
+        self.input_shape = input_shape
+        in_channels, in_height, in_width = self.input_shape
+        patch_h, patch_w = int(in_height / 2 ** 4), int(in_width / 2 ** 4)
+        self.output_shape = (1, patch_h, patch_w)
+
+        def discriminator_block(in_filters, out_filters, first_block=False):
+            layers = []
+            layers.append(nn.Conv2d(in_filters, out_filters, kernel_size=3, stride=1, padding=1))
+            if not first_block:
+                layers.append(nn.BatchNorm2d(out_filters))
+            layers.append(nn.LeakyReLU(0.2, inplace=True))
+            layers.append(nn.Conv2d(out_filters, out_filters, kernel_size=3, stride=2, padding=1))
+            layers.append(nn.BatchNorm2d(out_filters))
+            layers.append(nn.LeakyReLU(0.2, inplace=True))
+            return layers
+
+        layers = []
+        in_filters = in_channels
+        for i, out_filters in enumerate([64, 128, 256, 512]):
+            layers.extend(discriminator_block(in_filters, out_filters, first_block=(i == 0)))
+            in_filters = out_filters
+
+        layers.append(nn.Conv2d(out_filters, 1, kernel_size=3, stride=1, padding=1))  # 논문 구조에는 없는 부분이지만 해당 부분 없이 바로
+        # Dense를 할 경우 Param수가 급등함으로써 학습이 어려워짐.
+        self.model = nn.Sequential(*layers)
+
         layers2 = []
-        layers2.append(nn.Linear(16 * 16 * out_filters, 1024))
+        layers2.append(nn.Linear(16 * 16, 1024))
         layers2.append(nn.LeakyReLU(0.2, inplace=True))
         layers2.append(nn.Linear(1024, 1))
         layers2.append(nn.Sigmoid())
-        self.output = nn.Sequential(*layers2)
+
+        self.model2 = nn.Sequential(*layers2)
 
     def forward(self, img):
-        out = self.model(img)
-        out = out.view(out.size(0), -1)
-        return self.output(out)
+        x = self.model(img)
+        x = x.view(x.size(0), -1)
 
+        return self.model2(x)
