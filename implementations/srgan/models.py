@@ -12,7 +12,7 @@ class FeatureExtractor(nn.Module): # Feature Extract Model
         self.feature_extractor = nn.Sequential(*list(vgg19_model.features.children())[:36])
 
     def forward(self, img): # forward
-        return self.feature_extractor(img)import torch.nn as nn
+        return self.feature_extractor(img)
 import torch.nn.functional as F
 import torch
 from torchvision.models import vgg19
